@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import { DeviceOrientationControls } from 'three/addons/controls/DeviceOrientationControls.js';
 
-// ---------- MAZE DEFINITION (same) ----------
+// ---------- MAZE DEFINITION ----------
 const mazeGrid = [
     [0, 0, 1, 0, 0],
     [1, 0, 1, 0, 1],
@@ -24,7 +24,7 @@ scene.fog = new THREE.FogExp2(0x0a1030, 0.02);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.y = 1.6;
-camera.position.set(offsetX, 1.6, offsetZ); // start at (0,0) cell
+camera.position.set(offsetX, 1.6, offsetZ);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -114,11 +114,10 @@ function winGame() {
     if (gameWon) return;
     gameWon = true;
     winDiv.classList.remove('hidden');
-    // Disable all controls
-    if (currentControls) currentControls.disconnect?.();
+    if (currentControls && currentControls.disconnect) currentControls.disconnect();
 }
 
-// Collision detection (player bounding box)
+// Collision
 const playerRadius = 0.4;
 function collidesWithWalls(pos) {
     const playerBox = new THREE.Box3().set(
@@ -136,7 +135,6 @@ function tryMove(deltaMove) {
     if (!collidesWithWalls(newPos)) {
         camera.position.copy(newPos);
     } else {
-        // slide along X and Z separately
         const moveX = new THREE.Vector3(deltaMove.x, 0, 0);
         const newX = camera.position.clone().add(moveX);
         if (!collidesWithWalls(newX)) camera.position.x = newX.x;
@@ -144,7 +142,7 @@ function tryMove(deltaMove) {
         const newZ = camera.position.clone().add(moveZ);
         if (!collidesWithWalls(newZ)) camera.position.z = newZ.z;
     }
-    // Clamp to maze bounds
+    // Bounds
     const minX = offsetX - playerRadius;
     const maxX = offsetX + (cols-1)*CELL_SIZE + playerRadius;
     const minZ = offsetZ - playerRadius;
@@ -152,7 +150,6 @@ function tryMove(deltaMove) {
     camera.position.x = Math.min(maxX, Math.max(minX, camera.position.x));
     camera.position.z = Math.min(maxZ, Math.max(minZ, camera.position.z));
     
-    // Check hint/exit based on current cell
     const cell = getCellFromWorldPos(camera.position);
     if (cell) {
         if (!hintShown && cell.row === hintRow && cell.col === hintCol) showHint();
@@ -181,7 +178,6 @@ function initDesktop() {
     const controls = new PointerLockControls(camera, document.body);
     currentControls = controls;
     
-    // Show lock button (create if not exists)
     let lockBtn = document.getElementById('controls-lock');
     if (!lockBtn) {
         lockBtn = document.createElement('div');
@@ -234,31 +230,53 @@ function initDesktop() {
 // 2) MOBILE VR (DeviceOrientation + on‑screen buttons)
 let orientationControls = null;
 let moveInterval = null;
+let moveVec = { x:0, z:0 };
+
 function initMobileVR() {
     cleanupControls();
-    // Enable device orientation
+    // Check if device orientation is supported
+    if (!window.DeviceOrientationEvent) {
+        errorDiv.textContent = 'Device orientation not supported on this browser.';
+        errorDiv.classList.remove('hidden');
+        setTimeout(() => errorDiv.classList.add('hidden'), 3000);
+        return;
+    }
+    
     orientationControls = new DeviceOrientationControls(camera);
     orientationControls.connect();
     orientationControls.update();
     currentControls = orientationControls;
     
-    // Show touch buttons
+    // Show touch buttons and reset button
     const mobileDiv = document.getElementById('mobile-controls');
     mobileDiv.classList.remove('hidden');
     
-    let moveVec = { x:0, z:0 };
+    // Add reset orientation button if not exists
+    let resetBtn = document.getElementById('reset-orientation');
+    if (!resetBtn) {
+        resetBtn = document.createElement('button');
+        resetBtn.id = 'reset-orientation';
+        resetBtn.textContent = '⟳ Reset camera';
+        resetBtn.style.cssText = 'position:absolute; bottom:100px; left:20px; background:#444; padding:10px 16px; border-radius:30px; z-index:20;';
+        document.body.appendChild(resetBtn);
+        resetBtn.addEventListener('click', () => {
+            if (orientationControls) orientationControls.reset();
+        });
+    }
+    resetBtn.style.display = 'block';
+    
+    moveVec = { x:0, z:0 };
     const speed = 3.5;
     const updateMovement = () => {
         if (gameWon) return;
         const move = new THREE.Vector3(moveVec.x, 0, moveVec.z);
-        // rotate move vector by camera's yaw (orientation)
         const yaw = camera.rotation.y;
         const rotated = new THREE.Vector3(
             move.x * Math.cos(yaw) - move.z * Math.sin(yaw),
             0,
             move.x * Math.sin(yaw) + move.z * Math.cos(yaw)
         );
-        rotated.multiplyScalar(speed * 0.016); // assume ~60fps
+        rotated.multiplyScalar(speed * 0.016);
         tryMove(rotated);
     };
     if (moveInterval) clearInterval(moveInterval);
@@ -274,7 +292,7 @@ function initMobileVR() {
         if (dir === 'back') moveVec.z = active ? 1 : 0;
         if (dir === 'left') moveVec.x = active ? -1 : 0;
         if (dir === 'right') moveVec.x = active ? 1 : 0;
-        // renormalize if both opposite pressed
+        // simple anti-clash
         if (moveVec.z !== 0 && ((fwd.active && back.active) || (moveVec.z === -1 && moveVec.z === 1))) moveVec.z = 0;
         if (moveVec.x !== 0 && ((left.active && right.active) || (moveVec.x === -1 && moveVec.x === 1))) moveVec.x = 0;
     };
@@ -293,10 +311,11 @@ function initMobileVR() {
         clearInterval(moveInterval);
         orientationControls.disconnect();
         mobileDiv.classList.add('hidden');
+        if (resetBtn) resetBtn.style.display = 'none';
     };
 }
 
-// 3) AR (WebXR immersive-ar)
+// 3) AR (WebXR immersive-ar) – fixed recursion & added desktop fallback
 async function initAR() {
     cleanupControls();
     if (!navigator.xr) {
@@ -308,15 +327,13 @@ async function initAR() {
     try {
         const session = await navigator.xr.requestSession('immersive-ar', { requiredFeatures: ['hit-test'] });
         renderer.xr.setSession(session);
-        // For AR we need to place the maze on a detected plane.
-        // Simplified: place at origin, allow user to walk around (requires ARKit/ARCore).
-        // But to keep demo functional, we just show a message.
+        // For AR we place the maze at floor level (origin)
+        mazeGroup.position.set(0, 0, 0);
+        camera.position.set(offsetX, 1.6, offsetZ);
+        // No additional controls needed; user walks physically.
         errorDiv.textContent = 'AR mode active – maze placed at floor level. Walk around it!';
         errorDiv.classList.remove('hidden');
         setTimeout(() => errorDiv.classList.add('hidden'), 3000);
-        mazeGroup.position.set(0, 0, 0);
-        camera.position.set(offsetX, 1.6, offsetZ);
-        // No additional controls needed; user physically moves.
         session.addEventListener('end', () => {
             renderer.xr.setSession(null);
         });
@@ -330,19 +347,25 @@ async function initAR() {
 }
 
 function cleanupControls() {
-    if (currentControls && currentControls.disconnect) currentControls.disconnect();
-    // hide mobile buttons
-    document.getElementById('mobile-controls').classList.add('hidden');
+    if (currentControls && currentControls.disconnect) {
+        currentControls.disconnect();
+        currentControls = null;
+    }
+    // Hide mobile UI
+    const mobileDiv = document.getElementById('mobile-controls');
+    if (mobileDiv) mobileDiv.classList.add('hidden');
     const lockBtn = document.getElementById('controls-lock');
     if (lockBtn) lockBtn.style.display = 'none';
+    const resetBtn = document.getElementById('reset-orientation');
+    if (resetBtn) resetBtn.style.display = 'none';
 }
 
-// UI button handlers
+// UI buttons
 document.getElementById('btn-desktop').addEventListener('click', initDesktop);
 document.getElementById('btn-mobile-vr').addEventListener('click', initMobileVR);
 document.getElementById('btn-ar').addEventListener('click', initAR);
 
-// Initial call – default to desktop (or detect mobile? we let user choose)
+// Start with desktop by default
 initDesktop();
 
 // Animation loop
