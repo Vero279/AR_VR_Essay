@@ -2,6 +2,7 @@ body {
     margin: 0;
     overflow: hidden;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    touch-action: none; /* prevent touch scrolling on mobile */
 }
 
 #info {
@@ -27,12 +28,14 @@ body {
     z-index: 20;
     display: flex;
     justify-content: center;
-    gap: 20px;
+    gap: 15px;
+    flex-wrap: wrap;
+    padding: 0 10px;
 }
 
 button {
-    padding: 12px 24px;
-    font-size: 18px;
+    padding: 12px 20px;
+    font-size: 16px;
     font-weight: bold;
     border: none;
     border-radius: 40px;
@@ -49,7 +52,57 @@ button:hover {
     color: #111;
 }
 
-#hint-message, #win-message {
+/* mobile VR on‑screen buttons */
+#mobile-controls {
+    position: absolute;
+    bottom: 30px;
+    right: 20px;
+    z-index: 20;
+    background: rgba(0,0,0,0.5);
+    border-radius: 80px;
+    padding: 12px;
+    backdrop-filter: blur(8px);
+}
+
+.joystick {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.mid-row {
+    display: flex;
+    gap: 20px;
+}
+
+#mobile-controls button {
+    background: rgba(30,30,40,0.9);
+    font-size: 28px;
+    padding: 12px 18px;
+    border-radius: 60px;
+    width: 70px;
+    height: 70px;
+    box-shadow: 0 4px 12px black;
+    touch-action: manipulation;
+}
+
+#orientation-status {
+    text-align: center;
+    font-size: 12px;
+    color: #ffcc88;
+    margin-top: 8px;
+    background: rgba(0,0,0,0.6);
+    padding: 4px 12px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.hidden {
+    display: none !important;
+}
+
+#hint-message, #win-message, #error-message {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -74,21 +127,19 @@ button:hover {
     font-size: 32px;
 }
 
-.hidden {
-    opacity: 0;
-    visibility: hidden;
+#error-message {
+    color: #ff8888;
+    border-color: #ff5555;
+    white-space: normal;
+    max-width: 80%;
 }
 
-#ar-controls {
-    position: absolute;
-    bottom: 20px;
-    left: 20px;
-    background: rgba(0,0,0,0.6);
-    color: #ffcc77;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-family: monospace;
-    pointer-events: none;
-    z-index: 10;
+/* desktop only lock indicator (hidden on mobile) */
+#controls-lock {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    button { padding: 10px 16px; font-size: 14px; }
+    #mobile-controls button { width: 55px; height: 55px; font-size: 24px; }
 }

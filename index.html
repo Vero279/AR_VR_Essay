@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>AR/VR Labyrinth – Find the Hint</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Labyrinth – Desktop · Mobile VR · AR</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,10 +11,24 @@
         🧩 Find the glowing hint → 🚪 Reach the golden exit
     </div>
 
-    <!-- Mode selection buttons -->
+    <!-- Mode selection -->
     <div id="mode-buttons">
-        <button id="enter-ar">🔘 AR Mode (tabletop)</button>
-        <button id="enter-vr">🥽 VR Mode (teleport)</button>
+        <button id="btn-desktop">🖱️ Desktop (WASD + mouse)</button>
+        <button id="btn-mobile-vr">📱 Mobile VR (gyro + buttons)</button>
+        <button id="btn-ar">🔘 AR (WebXR, experimental)</button>
+    </div>
+
+    <!-- Mobile VR on‑screen joystick (arrow buttons) -->
+    <div id="mobile-controls" class="hidden">
+        <div class="joystick">
+            <button id="move-fwd">▲</button>
+            <div class="mid-row">
+                <button id="move-left">◀</button>
+                <button id="move-back">▼</button>
+                <button id="move-right">▶</button>
+            </div>
+        </div>
+        <div id="orientation-status">🔄 Move your phone to look around</div>
     </div>
 
     <div id="hint-message" class="hidden">
@@ -23,11 +37,7 @@
     <div id="win-message" class="hidden">
         🎉 YOU ESCAPED! 🎉
     </div>
-
-    <!-- For AR tap‑to‑move (only visible in AR) -->
-    <div id="ar-controls" class="hidden">
-        👆 Tap on a walkable cell to move
-    </div>
+    <div id="error-message" class="hidden"></div>
 
     <script type="importmap">
         {
