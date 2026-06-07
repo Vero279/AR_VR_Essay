@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AR/VR Labyrinth – Find the Hint</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="info">
+        🧩 Find the glowing hint → 🚪 Reach the golden exit
+    </div>
+
+    <!-- Mode selection buttons -->
+    <div id="mode-buttons">
+        <button id="enter-ar">🔘 AR Mode (tabletop)</button>
+        <button id="enter-vr">🥽 VR Mode (teleport)</button>
+    </div>
+
+    <div id="hint-message" class="hidden">
+        ✨ HINT: "The exit lies beyond the darkest corner" ✨
+    </div>
+    <div id="win-message" class="hidden">
+        🎉 YOU ESCAPED! 🎉
+    </div>
+
+    <!-- For AR tap‑to‑move (only visible in AR) -->
+    <div id="ar-controls" class="hidden">
+        👆 Tap on a walkable cell to move
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="main.js"></script>
+</body>
+</html>
