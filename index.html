@@ -1,52 +1,113 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Labyrinth – Desktop · Mobile VR · AR</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="description" content="An immersive 3D library experience with AR and VR modes." />
+  <title>Bibliotheca — Immersive Library</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div id="info">
-        🧩 Find the glowing hint → 🚪 Reach the golden exit
-    </div>
 
-    <!-- Mode selection -->
-    <div id="mode-buttons">
-        <button id="btn-desktop">🖱️ Desktop (WASD + mouse)</button>
-        <button id="btn-mobile-vr">📱 Mobile VR (gyro + buttons)</button>
-        <button id="btn-ar">🔘 AR (WebXR, experimental)</button>
+  <!-- ── Loading Screen ──────────────────────────────────── -->
+  <div id="loading-screen" role="status" aria-live="polite">
+    <div class="loader-inner">
+      <div class="loader-icon" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+      <p class="loader-text">Curating your library…</p>
     </div>
+  </div>
 
-    <!-- Mobile VR on‑screen joystick (arrow buttons) -->
-    <div id="mobile-controls" class="hidden">
-        <div class="joystick">
-            <button id="move-fwd">▲</button>
-            <div class="mid-row">
-                <button id="move-left">◀</button>
-                <button id="move-back">▼</button>
-                <button id="move-right">▶</button>
-            </div>
+  <!-- ── AR Camera Feed (background) ─────────────────────── -->
+  <video id="ar-video" autoplay playsinline muted aria-hidden="true"></video>
+
+  <!-- ── VR / Fallback Background ─────────────────────────── -->
+  <div id="scene-bg" aria-hidden="true">
+    <div class="bg-wall bg-wall--back"></div>
+    <div class="bg-wall bg-wall--left"></div>
+    <div class="bg-wall bg-wall--right"></div>
+    <div class="bg-floor"></div>
+    <div class="bg-ceiling"></div>
+    <div class="bg-light" aria-hidden="true"></div>
+  </div>
+
+  <!-- ── 3D Scene ───────────────────────────────────────────── -->
+  <main id="scene-wrapper" role="main">
+    <div id="scene" aria-label="3D Library Scene">
+
+      <!-- Shelving units injected by JS -->
+      <div id="shelves-container" role="list" aria-label="Book shelves"></div>
+
+    </div>
+  </main>
+
+  <!-- ── HUD / Navigation Controls ────────────────────────── -->
+  <nav id="controls" aria-label="Scene navigation">
+    <button class="ctrl-btn" id="btn-left"  aria-label="Rotate left"  data-dir="-1">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <button class="ctrl-btn" id="btn-right" aria-label="Rotate right" data-dir="1">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  </nav>
+
+  <!-- ── Mode Toggle Bar ───────────────────────────────────── -->
+  <div id="mode-bar" role="toolbar" aria-label="View mode">
+    <button class="mode-btn active" id="btn-explore" aria-pressed="true"  data-mode="explore">Explore</button>
+    <button class="mode-btn"        id="btn-ar"      aria-pressed="false" data-mode="ar">AR</button>
+    <button class="mode-btn"        id="btn-vr"      aria-pressed="false" data-mode="vr">VR</button>
+  </div>
+
+  <!-- ── Progress / Gamification ──────────────────────────── -->
+  <div id="progress-bar" aria-label="Books discovered">
+    <span id="progress-label" aria-live="polite">0 discovered</span>
+    <div id="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div id="progress-fill"></div>
+    </div>
+  </div>
+
+  <!-- ── Collection Counter ───────────────────────────────── -->
+  <div id="collection-counter" aria-live="polite" aria-label="Saved to collection">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+    <span id="collection-count">0</span>
+  </div>
+
+  <!-- ── Book Detail Panel ─────────────────────────────────── -->
+  <aside id="book-panel" role="dialog" aria-modal="true" aria-label="Book details" aria-hidden="true">
+    <button id="panel-close" aria-label="Close book details">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div id="panel-content">
+      <div id="panel-cover-wrap">
+        <img id="panel-cover" src="" alt="" />
+      </div>
+      <div id="panel-meta">
+        <h2 id="panel-title"></h2>
+        <p  id="panel-author"></p>
+        <p  id="panel-synopsis"></p>
+        <div id="panel-actions">
+          <button id="panel-save" class="action-btn" aria-label="Save to collection">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            Add to Collection
+          </button>
+          <a id="panel-link" href="#" target="_blank" rel="noopener noreferrer" class="action-btn action-btn--ghost">
+            View on Google Books
+          </a>
         </div>
-        <div id="orientation-status">🔄 Move your phone to look around</div>
+      </div>
     </div>
+  </aside>
 
-    <div id="hint-message" class="hidden">
-        ✨ HINT: "The exit lies beyond the darkest corner" ✨
-    </div>
-    <div id="win-message" class="hidden">
-        🎉 YOU ESCAPED! 🎉
-    </div>
-    <div id="error-message" class="hidden"></div>
+  <!-- ── Panel Backdrop ────────────────────────────────────── -->
+  <div id="panel-backdrop" aria-hidden="true"></div>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
-            }
-        }
-    </script>
-    <script type="module" src="main.js"></script>
+  <!-- ── Toast Notifications ──────────────────────────────── -->
+  <div id="toast" role="alert" aria-live="assertive" aria-hidden="true"></div>
+
+  <script src="app.js"></script>
 </body>
 </html>
